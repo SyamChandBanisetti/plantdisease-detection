@@ -123,4 +123,4 @@ st.markdown("""
 - ✨ Rejuvenate soil with compost annually.  
 """)
 
-st.markdown("<p style='text-align:center; font-size:0.9em;'>🌱 Built with ❤️ using Streamlit and AI-powered backend</p>", unsafe_allow_html=True)
+st.markdown("<p style='text-align:center; font-size:0.9em;'>🌱 Built with ❤️ for Gardeners and Plant Growers from TEAM 6, Designed by Kartik J</p>", unsafe_allow_html=True)
