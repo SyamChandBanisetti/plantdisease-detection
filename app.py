@@ -10,11 +10,6 @@ from config import GEMINI_API_ENDPOINT
 load_dotenv()
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
-# Safety check
-if not GEMINI_API_KEY:
-    st.error("❌ API key not found. Please set GEMINI_API_KEY in your .env file.")
-    st.stop()
-
 # App Config
 st.set_page_config(page_title="🌱 Plant Disease Detection", layout="wide")
 
@@ -56,48 +51,36 @@ def encode_image(image_bytes):
     return base64.b64encode(image_bytes).decode("utf-8")
 
 def get_gemini_analysis(encoded_image):
-    try:
-        headers = {"Content-Type": "application/json"}
-        payload = {
-            "contents": [{
-                "parts": [
-                    {"text": "Analyze this plant leaf image and identify any diseases, symptoms, and care suggestions."},
-                    {"inlineData": {"mimeType": "image/jpeg", "data": encoded_image}}
-                ]
-            }]
-        }
-        response = requests.post(
-            f"{GEMINI_API_ENDPOINT}?key={GEMINI_API_KEY}",
-            headers=headers,
-            json=payload
-        )
-        if response.status_code != 200:
-            raise Exception(f"Error {response.status_code}: {response.text}")
-        
-        result_json = response.json()
-        return result_json["candidates"][0]["content"]["parts"][0]["text"]
-
-    except Exception as e:
-        st.error(f"Error during Gemini API call: {e}")
-        return None
+    headers = {"Content-Type": "application/json"}
+    payload = {
+        "contents": [{
+            "parts": [
+                {"text": "Analyze this plant leaf image and identify any diseases, symptoms, and care suggestions."},
+                {"inlineData": {"mimeType": "image/jpeg", "data": encoded_image}}
+            ]
+        }]
+    }
+    response = requests.post(
+        f"{GEMINI_API_ENDPOINT}?key={GEMINI_API_KEY}",
+        headers=headers,
+        json=payload
+    )
+    return response.json()["candidates"][0]["content"]["parts"][0]["text"]
 
 # Image Processing
 if uploaded_file:
-    image = Image.open(uploaded_file)
-    resized_image = image.resize((350, 350))
-    st.image(resized_image, caption="📸 Uploaded Leaf", use_container_width=False)
-
+    st.image(uploaded_file, caption="📸 Uploaded Leaf", use_column_width=True)
     image_bytes = uploaded_file.read()
     encoded_image = encode_image(image_bytes)
 
     with st.spinner("🔍 Analyzing leaf image..."):
-        result = get_gemini_analysis(encoded_image)
-        if result:
+        try:
+            result = get_gemini_analysis(encoded_image)
             st.success("✅ Analysis Complete!")
             st.markdown("### 🧬 Disease Analysis Result")
             st.markdown(result)
-        else:
-            st.error("❌ No result returned. Please check the image or try again later.")
+        except Exception as e:
+            st.error("❌ Failed to analyze the image. Please check your API key or try again.")
 
 # Info Tabs
 st.markdown("---")
@@ -140,4 +123,4 @@ st.markdown("""
 - ✨ Rejuvenate soil with compost annually.  
 """)
 
-st.markdown("<p style='text-align:center; font-size:0.9em;'>🌱 Built for Farmers and Gardeners by Team 6, Designed by Kartik</p>", unsafe_allow_html=True)
+st.markdown("<p style='text-align:center; font-size:0.9em;'>🌱 Built with ❤️ using Streamlit and AI-powered backend</p>", unsafe_allow_html=True)
