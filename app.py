@@ -1,78 +1,66 @@
 # app.py
 import streamlit as st
 import requests
-import base64
-import os
 from PIL import Image
+import base64
+import io
 from dotenv import load_dotenv
+import os
 from config import GEMINI_API_ENDPOINT
 
-# Load API Key from .env
 load_dotenv()
+
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
-# App Config
-st.set_page_config(page_title="🌱 Plant Disease Detection", layout="wide")
+st.set_page_config(page_title="Plant Disease Detector", layout="centered")
 
-# Sidebar
-with st.sidebar:
-    st.title("🌿 Plant Doctor")
-    st.markdown("Upload a leaf image to detect plant disease.")
-    st.markdown("---")
+st.title("🌿 Plant Disease Detector")
+st.markdown("Upload a **leaf image**, and get a professional assessment of its health and possible diseases.")
 
-# Header
-st.markdown("<h1 style='text-align: center; color: green;'>Plant Disease Detection 🌾</h1>", unsafe_allow_html=True)
-st.write("AI-powered leaf image analysis")
+uploaded_image = st.file_uploader("Choose a leaf image", type=["jpg", "jpeg", "png"])
 
-# Image Upload
-uploaded_file = st.file_uploader("Upload a leaf image", type=["jpg", "jpeg", "png"])
+if uploaded_image:
+    image = Image.open(uploaded_image)
+    st.image(image, caption="Uploaded Leaf", use_column_width=True)
 
-def encode_image(image_bytes):
-    return base64.b64encode(image_bytes).decode("utf-8")
+    if st.button("Analyze"):
+        with st.spinner("Analyzing the leaf..."):
+            buffered = io.BytesIO()
+            image.save(buffered, format="JPEG")
+            img_bytes = buffered.getvalue()
+            img_base64 = base64.b64encode(img_bytes).decode("utf-8")
 
-def get_gemini_analysis(encoded_image):
-    headers = {"Content-Type": "application/json"}
-    payload = {
-        "contents": [{
-            "parts": [
-                {"text": "Analyze this plant leaf image and identify any diseases."},
-                {"inlineData": {"mimeType": "image/jpeg", "data": encoded_image}}
-            ]
-        }]
-    }
-    response = requests.post(
-        f"{GEMINI_API_ENDPOINT}?key={GEMINI_API_KEY}",
-        headers=headers,
-        json=payload
-    )
-    return response.json()["candidates"][0]["content"]["parts"][0]["text"]
+            payload = {
+                "contents": [
+                    {
+                        "parts": [
+                            {"inline_data": {
+                                "mime_type": "image/jpeg",
+                                "data": img_base64
+                            }},
+                            {"text": (
+                                "You are a plant pathology expert. Analyze the uploaded image of the leaf. "
+                                "Identify any visible signs of disease such as spots, discoloration, mold, wilting, or other anomalies. "
+                                "Provide a detailed diagnosis along with the possible disease name, its cause, and suggest remedies if needed."
+                            )}
+                        ]
+                    }
+                ]
+            }
 
-# Main Section
-if uploaded_file:
-    st.image(uploaded_file, caption="Uploaded Leaf", use_column_width=True)
-    image_bytes = uploaded_file.read()
-    encoded_image = encode_image(image_bytes)
+            headers = {
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {GEMINI_API_KEY}"
+            }
 
-    with st.spinner("Analyzing image with Gemini..."):
-        try:
-            result = get_gemini_analysis(encoded_image)
-            st.success("Analysis Complete!")
-            st.markdown("### 🧬 Disease Analysis Result")
-            st.markdown(result)
-        except Exception as e:
-            st.error("❌ Failed to analyze the image. Please check your API key or try again.")
+            response = requests.post(GEMINI_API_ENDPOINT, json=payload, headers=headers)
 
-# Tabs
-st.markdown("---")
-tab1, tab2, tab3 = st.tabs(["🌿 Disease Info", "💡 Prevention Tips", "📘 Plant Care Guide"])
-
-with tab1:
-    st.write("Common diseases include powdery mildew, bacterial spots, leaf blight, etc. Always monitor changes in color and texture.")
-with tab2:
-    st.write("Water early, avoid wetting leaves, rotate crops, and maintain garden hygiene.")
-with tab3:
-    st.write("Each plant species has specific needs. Check humidity, sunlight, and use organic pesticides.")
-
-# Footer
-st.markdown("---")
-st.markdown("<small>🌱 Built for plant growers </small>", unsafe_allow_html=True)
+            if response.status_code == 200:
+                try:
+                    analysis = response.json()["candidates"][0]["content"]["parts"][0]["text"]
+                    st.subheader("🩺 Diagnosis Result")
+                    st.markdown(analysis)
+                except Exception:
+                    st.error("Something went wrong while processing the analysis.")
+            else:
+                st.error("Failed to fetch results. Please try again later.")
