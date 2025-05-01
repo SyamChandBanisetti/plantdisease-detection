@@ -1,66 +1,118 @@
 # app.py
 import streamlit as st
 import requests
-from PIL import Image
 import base64
-import io
-from dotenv import load_dotenv
 import os
+from PIL import Image
+from dotenv import load_dotenv
 from config import GEMINI_API_ENDPOINT
 
+# Load API Key from .env
 load_dotenv()
-
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
-st.set_page_config(page_title="Plant Disease Detector", layout="centered")
+# App Config
+st.set_page_config(page_title="🌱 Plant Disease Detection", layout="wide")
 
-st.title("🌿 Plant Disease Detector")
-st.markdown("Upload a **leaf image**, and get a professional assessment of its health and possible diseases.")
+# Sidebar
+with st.sidebar:
+    st.title("🌿 Plant Doctor Assistant")
+    st.markdown("Upload a leaf image to detect possible plant diseases.")
+    st.markdown("### 📋 Common Plant Diseases")
+    st.info("""
+    - **Powdery Mildew** – White powder on leaves.
+    - **Leaf Spot** – Brown or yellow circles.
+    - **Blight** – Rapid plant tissue death.
+    - **Rust** – Orange or rusty spots.
+    - **Downy Mildew** – Yellow spots under leaves.
+    """)
+    st.markdown("### 💡 Quick Gardening Tips")
+    st.success("""
+    - Water early morning ☀️
+    - Trim infected leaves ✂️
+    - Compost responsibly ♻️
+    - Use neem oil or baking soda spray 🌿
+    """)
+    st.markdown("🔗 [GitHub Repo](https://github.com/your_repo)")
+    st.markdown("📬 [Contact](mailto:your.email@example.com)")
 
-uploaded_image = st.file_uploader("Choose a leaf image", type=["jpg", "jpeg", "png"])
+# Header
+st.markdown("<h1 style='text-align: center; color: green;'>🌾 Plant Disease Detection App</h1>", unsafe_allow_html=True)
+st.markdown("<h5 style='text-align: center;'>Detect plant health issues through a single leaf image!</h5>", unsafe_allow_html=True)
 
-if uploaded_image:
-    image = Image.open(uploaded_image)
-    st.image(image, caption="Uploaded Leaf", use_column_width=True)
+# Image Upload
+uploaded_file = st.file_uploader("📷 Upload a leaf image", type=["jpg", "jpeg", "png"])
 
-    if st.button("Analyze"):
-        with st.spinner("Analyzing the leaf..."):
-            buffered = io.BytesIO()
-            image.save(buffered, format="JPEG")
-            img_bytes = buffered.getvalue()
-            img_base64 = base64.b64encode(img_bytes).decode("utf-8")
+def encode_image(image_bytes):
+    return base64.b64encode(image_bytes).decode("utf-8")
 
-            payload = {
-                "contents": [
-                    {
-                        "parts": [
-                            {"inline_data": {
-                                "mime_type": "image/jpeg",
-                                "data": img_base64
-                            }},
-                            {"text": (
-                                "You are a plant pathology expert. Analyze the uploaded image of the leaf. "
-                                "Identify any visible signs of disease such as spots, discoloration, mold, wilting, or other anomalies. "
-                                "Provide a detailed diagnosis along with the possible disease name, its cause, and suggest remedies if needed."
-                            )}
-                        ]
-                    }
-                ]
-            }
+def get_gemini_analysis(encoded_image):
+    headers = {"Content-Type": "application/json"}
+    payload = {
+        "contents": [{
+            "parts": [
+                {"text": "Analyze this plant leaf image and identify any diseases, symptoms, and care suggestions."},
+                {"inlineData": {"mimeType": "image/jpeg", "data": encoded_image}}
+            ]
+        }]
+    }
+    response = requests.post(
+        f"{GEMINI_API_ENDPOINT}?key={GEMINI_API_KEY}",
+        headers=headers,
+        json=payload
+    )
+    return response.json()["candidates"][0]["content"]["parts"][0]["text"]
 
-            headers = {
-                "Content-Type": "application/json",
-                "Authorization": f"Bearer {GEMINI_API_KEY}"
-            }
+# Main Section
+if uploaded_file:
+    st.image(uploaded_file, caption="📸 Uploaded Leaf", use_column_width=True)
+    image_bytes = uploaded_file.read()
+    encoded_image = encode_image(image_bytes)
 
-            response = requests.post(GEMINI_API_ENDPOINT, json=payload, headers=headers)
+    with st.spinner("🔍 Analyzing leaf image..."):
+        try:
+            result = get_gemini_analysis(encoded_image)
+            st.success("✅ Analysis Complete!")
+            st.markdown("### 🧬 Disease Detection Result")
+            st.markdown(result)
+        except Exception as e:
+            st.error("❌ Unable to analyze. Check your API key or try again later.")
 
-            if response.status_code == 200:
-                try:
-                    analysis = response.json()["candidates"][0]["content"]["parts"][0]["text"]
-                    st.subheader("🩺 Diagnosis Result")
-                    st.markdown(analysis)
-                except Exception:
-                    st.error("Something went wrong while processing the analysis.")
-            else:
-                st.error("Failed to fetch results. Please try again later.")
+# Tabs
+st.markdown("## 🌿 Additional Plant Health Info")
+tab1, tab2, tab3 = st.tabs(["🦠 Disease Info", "🚫 Prevention Tips", "🪴 Plant Care Guide"])
+
+with tab1:
+    st.markdown("""
+    - **Anthracnose**: Causes dark lesions on leaves, stems, and fruit.
+    - **Bacterial Wilt**: Sudden wilting and yellowing of leaves.
+    - **Mosaic Virus**: Mottled green/yellow patterns on leaves.
+    """)
+
+with tab2:
+    st.markdown("""
+    - Sterilize tools before use 🔧
+    - Avoid overcrowding plants 🪴🪴
+    - Improve soil drainage 🌧️
+    - Rotate crops annually 🔄
+    """)
+
+with tab3:
+    st.markdown("""
+    - 🌞 Sunlight: Ensure 6-8 hours of sun per day.
+    - 💧 Watering: Keep soil moist, not soggy.
+    - 🌡️ Temperature: Monitor plant hardiness zones.
+    - 🧪 Fertilizer: Use compost or organic fertilizer monthly.
+    """)
+
+# Footer Tips
+st.markdown("---")
+st.markdown("### 🌻 Bonus Tips for a Thriving Garden")
+st.markdown("""
+- 🧼 Use soap-water mix to treat aphids naturally.
+- 🌿 Mulch helps retain soil moisture and reduce weeds.
+- 🪰 Check leaves weekly for early pest detection.
+- 🪴 Re-potting tired plants gives fresh life.
+""")
+
+st.markdown("<p style='text-align:center; font-size:0.9em;'>🌱 Built with ❤️ using Streamlit & AI-powered backend</p>", unsafe_allow_html=True)
