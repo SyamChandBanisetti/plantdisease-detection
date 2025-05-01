@@ -69,7 +69,7 @@ def get_gemini_analysis(encoded_image):
 
 # Image Processing
 if uploaded_file:
-    st.image(uploaded_file, caption="📸 Uploaded Leaf", use_column_width=True)
+    st.image(uploaded_file, caption="📸 Uploaded Leaf", use_container_width=True)
     image_bytes = uploaded_file.read()
     encoded_image = encode_image(image_bytes)
 
