@@ -69,7 +69,14 @@ def get_gemini_analysis(encoded_image):
 
 # Image Processing
 if uploaded_file:
-    st.image(uploaded_file, caption="📸 Uploaded Leaf", use_column_width=True)
+    # Open and resize image before display
+    image = Image.open(uploaded_file)
+    resized_image = image.resize((350, 350))  # Resize to a more reasonable display size
+
+    # Display resized image
+    st.image(resized_image, caption="📸 Uploaded Leaf", use_container_width=False)
+
+    # Read original file bytes for Gemini API analysis
     image_bytes = uploaded_file.read()
     encoded_image = encode_image(image_bytes)
 
