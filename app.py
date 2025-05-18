@@ -123,4 +123,4 @@ st.markdown("""
 - ✨ Rejuvenate soil with compost annually.  
 """)
 
-st.markdown("<p style='text-align:center; font-size:0.9em;'>🌱 Built with ❤️ for Gardeners and Plant Growers... Created by Syam Chand Banisetti</p>")
+st.markdown("<p style='text-align:center; font-size:0.9em;'>🌱 Built with ❤️ for Gardeners and Plant Growers... Created by Syam Chand Banisetti</p>",unsafe_allow_html=True)
