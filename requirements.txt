@@ -1,4 +1,8 @@
 streamlit
 requests
-python-dotenv
 Pillow
+python-dotenv
+gtts
+SpeechRecognition
+pydub
+
