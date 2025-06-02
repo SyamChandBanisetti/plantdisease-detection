@@ -13,7 +13,8 @@ load_dotenv()
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
 # App Config
-st.set_page_config(page_title="\ud83c\udf31 Plant Disease Detection", layout="wide")
+st.set_page_config(page_title="Plant Disease Detection", layout="wide")
+st.title("🌱 Plant Disease Detection")
 
 # Theme Toggle
 dark_mode = st.sidebar.toggle("\ud83c\udf19 Dark Mode", value=False)
