@@ -8,15 +8,15 @@ import streamlit.components.v1 as components
 import time
 from config import GEMINI_API_ENDPOINT
 
-# Load API Key from .env file or environment
+# Load API Key
 load_dotenv()
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
-# App Config - No emoji in page_title to avoid Unicode error
-st.set_page_config(page_title="Plant Disease Detection", layout="wide")
+# App Config
+st.set_page_config(page_title="🌱 Plant Disease Detection", layout="wide")
 
-# Theme Toggle using checkbox (no emoji)
-dark_mode = st.sidebar.checkbox("Dark Mode", value=False)
+# Theme Toggle
+dark_mode = st.sidebar.toggle("🌙 Dark Mode", value=False)
 if dark_mode:
     st.markdown("""<style>
         .main { background-color: #1e1e1e; color: white; }
@@ -27,7 +27,7 @@ else:
         .main { background: linear-gradient(135deg, #f0fff0 0%, #e0ffe0 100%); }
     </style>""", unsafe_allow_html=True)
 
-# Sidebar content
+# Sidebar
 with st.sidebar:
     st.title("🌿 Plant Doctor Assistant")
     st.markdown("Upload a leaf image to detect potential plant diseases and get care advice.")
@@ -58,7 +58,7 @@ st.markdown("<h1 style='text-align:center;'>🌾 Plant Disease Detection</h1>", 
 st.markdown("<h5 style='text-align:center;'>Upload a leaf photo to identify diseases and receive expert advice 🌿</h5>", unsafe_allow_html=True)
 st.markdown("---")
 
-# Upload file
+# Upload
 uploaded_file = st.file_uploader("📷 Upload a leaf image", type=["jpg", "jpeg", "png"])
 
 # Helper Functions
@@ -80,24 +80,6 @@ def get_gemini_analysis(encoded_image):
         headers=headers,
         json=payload
     )
-    response.raise_for_status()
-    return response.json()["candidates"][0]["content"]["parts"][0]["text"]
-
-def get_medicine_suggestions(disease_text):
-    # Simple prompt to AI to suggest medicines based on disease detected
-    headers = {"Content-Type": "application/json"}
-    prompt = f"Suggest effective medicines and treatments for the following plant disease description:\n{disease_text}\nProvide 3-5 medicine/treatment names with brief descriptions."
-    payload = {
-        "contents": [{
-            "parts": [{"text": prompt}]
-        }]
-    }
-    response = requests.post(
-        f"{GEMINI_API_ENDPOINT}?key={GEMINI_API_KEY}",
-        headers=headers,
-        json=payload
-    )
-    response.raise_for_status()
     return response.json()["candidates"][0]["content"]["parts"][0]["text"]
 
 def get_chatbot_response(user_input):
@@ -112,40 +94,25 @@ def get_chatbot_response(user_input):
         headers=headers,
         json=payload
     )
-    response.raise_for_status()
     return response.json()["candidates"][0]["content"]["parts"][0]["text"]
 
 # Main Analysis
 if uploaded_file:
     image_bytes = uploaded_file.read()
     encoded_image = encode_image(image_bytes)
-
-    # Display image with 70% size approx (adjust width as needed)
-    image = Image.open(uploaded_file)
-    width, height = image.size
-    new_width = int(width * 0.7)
-    new_height = int(height * 0.7)
-    resized_image = image.resize((new_width, new_height))
-    st.image(resized_image, caption="📸 Uploaded Leaf (Zoom Enabled)", use_container_width=False)
+    st.image(uploaded_file, caption="📸 Uploaded Leaf (Zoom Enabled)", use_column_width=True)
 
     with st.spinner("🔍 Analyzing image with AI..."):
         try:
             result = get_gemini_analysis(encoded_image)
             st.success("✅ Analysis Complete!")
             st.balloons()
-
-            confidence = round(70 + 30 * (time.time() % 1), 2)
+            confidence = round(70 + 30 * time.time() % 1, 2)
             st.markdown(f"### 🧪 Disease Confidence Score: `{confidence}%`")
             st.markdown("### 🧬 Disease Detection Result")
             st.markdown(result)
-
-            # Suggest medicines based on AI analysis result
-            with st.expander("💊 Suggested Medicines & Treatments"):
-                meds = get_medicine_suggestions(result)
-                st.markdown(meds)
-
         except Exception as e:
-            st.error(f"❌ Something went wrong. Please check your API key or try again.\n\nError: {e}")
+            st.error("❌ Something went wrong. Please check your API key or try again.")
 
     st.markdown("### 🌿 Plant Health Timeline")
     with st.expander("📅 View Timeline of Care Actions"):
@@ -199,7 +166,6 @@ if st.button("✅ Submit Answer"):
 # Voice-Enabled Chatbot
 st.markdown("---")
 st.subheader("🗣️ Ask the Garden Bot (Voice-enabled)")
-
 components.html("""
 <input type="text" id="voiceInput" placeholder="Speak your question..." style="width:100%;padding:10px;font-size:16px">
 <script>
@@ -229,8 +195,8 @@ if user_query:
             bot_reply = get_chatbot_response(user_query)
             st.markdown("**🌱 Garden Bot says:**")
             st.markdown(bot_reply)
-        except Exception as e:
-            st.error(f"❌ Chatbot failed to respond. Please try again.\n\nError: {e}")
+        except:
+            st.error("❌ Chatbot failed to respond. Please try again.")
 
 # Bonus Tips
 st.markdown("---")
