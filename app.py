@@ -16,7 +16,7 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 st.set_page_config(page_title="🌱 Plant Disease Detection", layout="wide")
 
 # Theme Toggle
-dark_mode = st.sidebar.toggle("🌙 Dark Mode", value=False)
+dark_mode = st.sidebar.checkbox("🌙 Dark Mode", value=False)
 if dark_mode:
     st.markdown("""<style>
         .main { background-color: #1e1e1e; color: white; }
@@ -70,7 +70,8 @@ def get_gemini_analysis(encoded_image):
     payload = {
         "contents": [{
             "parts": [
-                {"text": "Analyze this plant leaf image and identify any diseases, symptoms, and care suggestions."},
+                {"text": "Analyze this plant leaf image and identify any diseases, symptoms."},
+                {"text": "Also provide detailed treatment advice, including recommended medicines or natural remedies for the disease detected."},
                 {"inlineData": {"mimeType": "image/jpeg", "data": encoded_image}}
             ]
         }]
@@ -80,6 +81,7 @@ def get_gemini_analysis(encoded_image):
         headers=headers,
         json=payload
     )
+    response.raise_for_status()  # Raise error for bad responses
     return response.json()["candidates"][0]["content"]["parts"][0]["text"]
 
 def get_chatbot_response(user_input):
@@ -94,6 +96,7 @@ def get_chatbot_response(user_input):
         headers=headers,
         json=payload
     )
+    response.raise_for_status()
     return response.json()["candidates"][0]["content"]["parts"][0]["text"]
 
 # Main Analysis
@@ -107,12 +110,24 @@ if uploaded_file:
             result = get_gemini_analysis(encoded_image)
             st.success("✅ Analysis Complete!")
             st.balloons()
-            confidence = round(70 + 30 * time.time() % 1, 2)
+            confidence = round(70 + 30 * (time.time() % 1), 2)
             st.markdown(f"### 🧪 Disease Confidence Score: `{confidence}%`")
-            st.markdown("### 🧬 Disease Detection Result")
-            st.markdown(result)
+
+            # If you want to split disease detection and treatment advice (optional)
+            parts = result.split("Treatment:")
+            if len(parts) > 1:
+                disease_info = parts[0].strip()
+                treatment_info = "Treatment:" + parts[1].strip()
+                st.markdown("### 🧬 Disease Detection Result")
+                st.markdown(disease_info)
+                st.markdown("### 💊 Suggested Treatments & Medicines")
+                st.markdown(treatment_info)
+            else:
+                st.markdown("### 🧬 Disease Detection Result & Treatment Suggestions")
+                st.markdown(result)
+
         except Exception as e:
-            st.error("❌ Something went wrong. Please check your API key or try again.")
+            st.error(f"❌ Something went wrong. Please check your API key or try again.\nError details: {e}")
 
     st.markdown("### 🌿 Plant Health Timeline")
     with st.expander("📅 View Timeline of Care Actions"):
@@ -195,8 +210,8 @@ if user_query:
             bot_reply = get_chatbot_response(user_query)
             st.markdown("**🌱 Garden Bot says:**")
             st.markdown(bot_reply)
-        except:
-            st.error("❌ Chatbot failed to respond. Please try again.")
+        except Exception as e:
+            st.error(f"❌ Chatbot failed to respond. Please try again.\nError details: {e}")
 
 # Bonus Tips
 st.markdown("---")
