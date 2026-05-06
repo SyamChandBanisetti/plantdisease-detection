@@ -1,8 +1,5 @@
 streamlit
-requests
+google-generativeai
 Pillow
 python-dotenv
-gtts
-SpeechRecognition
-pydub
-reportlab
+requests
