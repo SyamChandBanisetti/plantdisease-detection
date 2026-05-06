@@ -1,8 +1,6 @@
 import streamlit as st
 import google.generativeai as genai
-import base64
 import time
-from PIL import Image
 import streamlit.components.v1 as components
 
 # ---------------- PAGE CONFIG ---------------- #
@@ -16,7 +14,7 @@ st.set_page_config(
 
 genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
 
-MODEL_NAME = "gemini-1.5-flash"
+MODEL_NAME = "gemini-2.0-flash"
 
 model = genai.GenerativeModel(MODEL_NAME)
 
@@ -31,6 +29,7 @@ if dark_mode:
         background-color: #1e1e1e;
         color: white;
     }
+
     h1, h5, .markdown-text-container {
         color: white !important;
     }
@@ -41,7 +40,11 @@ else:
     st.markdown("""
     <style>
     .main {
-        background: linear-gradient(135deg, #f0fff0 0%, #e0ffe0 100%);
+        background: linear-gradient(
+            135deg,
+            #f0fff0 0%,
+            #e0ffe0 100%
+        );
     }
     </style>
     """, unsafe_allow_html=True)
@@ -89,7 +92,7 @@ st.markdown(
 )
 
 st.markdown(
-    "<h5 style='text-align:center;'>Upload a leaf image to identify diseases and receive expert advice 🌿</h5>",
+    "<h5 style='text-align:center;'>Upload a leaf photo to identify diseases and receive treatment advice 🌿</h5>",
     unsafe_allow_html=True
 )
 
@@ -102,11 +105,7 @@ uploaded_file = st.file_uploader(
     type=["jpg", "jpeg", "png"]
 )
 
-# ---------------- HELPER FUNCTIONS ---------------- #
-
-def encode_image(image_bytes):
-    return base64.b64encode(image_bytes).decode("utf-8")
-
+# ---------------- AI ANALYSIS ---------------- #
 
 def analyze_plant_image(image_bytes):
 
@@ -145,17 +144,18 @@ def analyze_plant_image(image_bytes):
                 time.sleep(5)
 
             else:
-                raise e
+                return f"❌ Error: {e}"
 
     return "⚠️ API rate limit exceeded. Please try again later."
 
+# ---------------- CHATBOT ---------------- #
 
 def garden_chatbot(user_input):
 
     prompt = f"""
     You are a gardening expert.
 
-    Answer this user query simply and helpfully:
+    Answer this question simply and clearly:
 
     {user_input}
     """
@@ -175,7 +175,7 @@ def garden_chatbot(user_input):
                 time.sleep(5)
 
             else:
-                raise e
+                return f"❌ Error: {e}"
 
     return "⚠️ Too many requests. Please try again later."
 
@@ -193,25 +193,22 @@ if uploaded_file:
 
     with st.spinner("🔍 Analyzing plant health..."):
 
-        try:
+        result = analyze_plant_image(image_bytes)
 
-            result = analyze_plant_image(image_bytes)
+        st.success("✅ Analysis Complete!")
 
-            st.success("✅ Analysis Complete!")
+        st.balloons()
 
-            st.balloons()
+        confidence = round(
+            85 + 10 * (time.time() % 1),
+            2
+        )
 
-            confidence = round(85 + 10 * (time.time() % 1), 2)
+        st.markdown(
+            f"### 🧪 Disease Confidence Score: `{confidence}%`"
+        )
 
-            st.markdown(
-                f"### 🧪 Disease Confidence Score: `{confidence}%`"
-            )
-
-            st.markdown(result)
-
-        except Exception as e:
-
-            st.error(f"❌ Error: {e}")
+        st.markdown(result)
 
     # ---------------- TIMELINE ---------------- #
 
@@ -226,7 +223,7 @@ if uploaded_file:
 🗓️ +14 Days → Remove dead leaves and recheck
         """)
 
-# ---------------- EDUCATIONAL SECTION ---------------- #
+# ---------------- EDUCATION SECTION ---------------- #
 
 st.markdown("---")
 
@@ -302,7 +299,9 @@ st.markdown("---")
 st.subheader("🗣️ Ask the Garden Bot")
 
 components.html("""
-<input type="text" id="voiceInput"
+<input
+type="text"
+id="voiceInput"
 placeholder="Click here and speak..."
 style="width:100%;padding:10px;font-size:16px">
 
@@ -318,7 +317,8 @@ if ('webkitSpeechRecognition' in window) {
 
     recognition.interimResults = false;
 
-    document.getElementById("voiceInput")
+    document
+    .getElementById("voiceInput")
     .addEventListener("click", function() {
 
         recognition.start();
@@ -327,9 +327,12 @@ if ('webkitSpeechRecognition' in window) {
 
     recognition.onresult = function(event) {
 
-        const transcript = event.results[0][0].transcript;
+        const transcript =
+        event.results[0][0].transcript;
 
-        document.getElementById("voiceInput").value = transcript;
+        document.getElementById(
+            "voiceInput"
+        ).value = transcript;
 
         window.parent.postMessage({
             type: "streamlit:setComponentValue",
@@ -341,23 +344,19 @@ if ('webkitSpeechRecognition' in window) {
 </script>
 """, height=80)
 
-user_query = st.text_input("Or type your gardening question:")
+user_query = st.text_input(
+    "Or type your gardening question:"
+)
 
 if user_query:
 
     with st.spinner("💬 Thinking..."):
 
-        try:
+        reply = garden_chatbot(user_query)
 
-            reply = garden_chatbot(user_query)
+        st.markdown("### 🌱 Garden Bot says:")
 
-            st.markdown("### 🌱 Garden Bot says:")
-
-            st.markdown(reply)
-
-        except Exception as e:
-
-            st.error(f"❌ Chatbot Error: {e}")
+        st.markdown(reply)
 
 # ---------------- BONUS TIPS ---------------- #
 
