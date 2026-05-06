@@ -731,6 +731,201 @@ def garden_chatbot(user_input):
         return f"❌ Error: {e}"
 
 # ============================================================
+# RECOVERY TIMELINE
+# ============================================================
+
+def detect_common_disease(analysis_text):
+
+    analysis_lower = analysis_text.lower()
+
+    disease_aliases = {
+        "Rust Fungus": ["rust fungus", "rust disease", "rust"],
+        "Powdery Mildew": ["powdery mildew", "white powder"],
+        "Downy Mildew": ["downy mildew"],
+        "Leaf Spot": ["leaf spot", "spots on leaves", "brown spots"],
+        "Blight": ["blight", "late blight", "early blight"],
+        "Anthracnose": ["anthracnose"],
+        "Root Rot": ["root rot", "rotting roots"],
+        "Damping Off": ["damping off"],
+        "Bacterial Wilt": ["bacterial wilt"],
+        "Mosaic Virus": ["mosaic virus", "mosaic"],
+        "Fusarium Wilt": ["fusarium wilt", "fusarium"],
+        "Sooty Mold": ["sooty mold", "black mold"]
+    }
+
+    for disease_name, aliases in disease_aliases.items():
+
+        if any(alias in analysis_lower for alias in aliases):
+
+            return disease_name
+
+    for disease_name in COMMON_DISEASES:
+
+        if disease_name.lower() in analysis_lower:
+
+            return disease_name
+
+    return None
+
+
+def build_local_recovery_timeline(analysis_text):
+
+    disease_name = detect_common_disease(analysis_text)
+    disease = COMMON_DISEASES.get(disease_name, {})
+    medication = disease.get(
+        "medication",
+        "Follow the treatment suggested in the analysis, apply only as directed, and avoid mixing products."
+    )
+
+    disease_timelines = {
+        "Powdery Mildew": [
+            "Isolate the plant, remove the worst coated leaves, and start potassium bicarbonate, sulfur spray, or neem oil as directed.",
+            "Check whether white powder is reducing. Improve airflow, keep leaves dry, and repeat treatment only if the label allows.",
+            "Look for clean new growth. Prune crowded stems and remove any leaves that still show active powdery patches.",
+            "Return the plant to normal care if new leaves stay clean. Keep wider spacing and avoid late-evening overhead watering."
+        ],
+        "Leaf Spot": [
+            "Remove spotted leaves, clear fallen debris, and begin copper fungicide or chlorothalonil where it is labeled for the plant.",
+            "Inspect new spots. Water at soil level, add mulch to reduce splash, and keep infected leaves out of compost.",
+            "Check if spot spread has slowed. Remove remaining damaged leaves gradually so the plant keeps enough healthy foliage.",
+            "Continue prevention with dry leaves, clean tools, and better spacing. Repeat spray only according to product directions."
+        ],
+        "Blight": [
+            "Cut away infected tissue immediately, isolate the plant, and apply copper, mancozeb, or chlorothalonil where labeled.",
+            "Watch stems and leaf edges for fast browning. Remove any new collapsing parts and avoid wetting foliage.",
+            "Evaluate whether wilting or lesions have stopped. Support recovery with balanced watering and no excess nitrogen.",
+            "If symptoms continue spreading, remove the plant to protect nearby crops. If stable, continue weekly monitoring."
+        ],
+        "Rust Fungus": [
+            "Remove leaves with heavy orange spores and apply sulfur, neem oil, or a labeled rust fungicide.",
+            "Check leaf undersides for fresh rust pustules. Increase spacing and water only at the soil surface.",
+            "Look for cleaner new leaves. Continue removing infected leaves and avoid handling plants while wet.",
+            "Maintain airflow and dry foliage. Repeat treatment only if rust is still active and the product label allows it."
+        ],
+        "Downy Mildew": [
+            "Remove infected leaves, isolate the plant, and use copper or phosphorous acid products where labeled.",
+            "Check undersides of leaves for fuzzy growth. Reduce humidity and avoid overhead watering.",
+            "Monitor new leaves for yellow patches. Thin crowded growth and keep the growing area dry.",
+            "If no new fuzzy growth appears, continue preventive airflow and dry-leaf care through humid weather."
+        ],
+        "Anthracnose": [
+            "Prune infected leaves or stems, remove fallen debris, and apply copper or chlorothalonil where labeled.",
+            "Inspect for new sunken spots after watering or rain. Keep foliage dry and sanitize pruning tools.",
+            "Check fruits, stems, and leaf edges for fresh lesions. Remove infected plant material quickly.",
+            "Continue sanitation and avoid splash irrigation. Resume normal feeding only after spread has stopped."
+        ],
+        "Root Rot": [
+            "Stop watering, remove the plant from soggy soil, trim soft brown roots, and repot in fresh well-draining mix.",
+            "Keep soil lightly moist, not wet. Check whether wilting is easing and make sure the pot drains freely.",
+            "Look for firmer stems or new root growth. Avoid fertilizer until the plant shows recovery.",
+            "Return to a careful watering schedule only when the top soil dries properly between watering."
+        ],
+        "Damping Off": [
+            "Remove collapsed seedlings, improve airflow, and let the seed mix surface dry slightly.",
+            "Check remaining seedlings at soil level. Avoid crowding and water from below if possible.",
+            "Keep only firm healthy seedlings. Use sterile mix for any reseeding and clean trays before reuse.",
+            "If seedlings stay upright and new growth appears, gradually return to normal seedling care."
+        ],
+        "Bacterial Wilt": [
+            "Remove and dispose of severely wilted plants because reliable curative treatment is not available.",
+            "Check nearby plants for sudden wilt. Sanitize tools and avoid moving soil or water from the infected area.",
+            "Control insect vectors where relevant and keep the bed clear of infected debris.",
+            "Plan crop rotation and resistant varieties before replanting susceptible crops in the same area."
+        ],
+        "Mosaic Virus": [
+            "Isolate the plant and remove badly distorted growth. There is no curative spray for viral infection.",
+            "Check nearby plants for mottled leaves. Control aphids or whiteflies with neem oil or insecticidal soap.",
+            "If symptoms spread, remove the plant to reduce virus pressure. Sanitize hands and tools after handling.",
+            "Use clean seed, resistant varieties, and pest control before planting future crops."
+        ],
+        "Fusarium Wilt": [
+            "Remove heavily wilted plants and avoid moving infected soil to clean beds.",
+            "Check stems for one-sided yellowing or brown streaks. Keep tools clean and avoid overwatering.",
+            "Do not replant the same susceptible crop immediately. Improve drainage and remove infected roots.",
+            "Use resistant varieties, rotation, and soil solarization where practical before the next crop."
+        ],
+        "Sooty Mold": [
+            "Wash black coating gently from leaves and start controlling aphids, whiteflies, or scale with neem or insecticidal soap.",
+            "Check for sticky honeydew and insects under leaves. Repeat pest control according to the product label.",
+            "Look for cleaner new leaves and fewer pests. Prune dense growth that shelters insects.",
+            "Keep monitoring pest levels. Sooty mold should fade once honeydew-producing insects are controlled."
+        ]
+    }
+
+    actions = disease_timelines.get(
+        disease_name,
+        [
+            f"Isolate the plant, remove severely damaged leaves, and begin the recommended treatment. {medication}",
+            "Monitor the same leaves and nearby plants for spreading spots, wilting, mold, or new discoloration.",
+            "Remove any remaining infected tissue, keep tools clean, and adjust watering, spacing, and airflow.",
+            "If new growth is healthy, continue prevention. If symptoms spread, review the diagnosis and consider removing the plant."
+        ]
+    )
+
+    focus = disease_name if disease_name else "Detected plant health issue"
+
+    return f"""
+**Recovery focus:** {focus}
+
+🗓️ **Day 1:** {actions[0]}
+
+🗓️ **Day 3:** {actions[1]}
+
+🗓️ **Day 7:** {actions[2]}
+
+🗓️ **Day 14:** {actions[3]}
+"""
+
+
+def generate_recovery_timeline(analysis_text):
+
+    timeline_prompt = f"""
+    Based on this plant disease analysis:
+
+    {analysis_text}
+
+    Create a practical recovery timeline for the detected plant issue.
+
+    Use exactly this structure:
+    🗓️ **Day 1:** immediate treatment and isolation steps
+    🗓️ **Day 3:** monitoring signs and follow-up care
+    🗓️ **Day 7:** pruning, watering, and recovery checks
+    🗓️ **Day 14:** expected progress and next decision
+
+    Make it specific to the disease, symptoms, and treatment in the analysis.
+    Do not give generic filler.
+    Keep it concise.
+    """
+
+    try:
+
+        timeline_response = model.generate_content(
+            timeline_prompt
+        )
+
+        timeline_text = getattr(
+            timeline_response,
+            "text",
+            ""
+        ).strip()
+
+        if (
+            "Day 1" in timeline_text
+            and "Day 14" in timeline_text
+            and len(timeline_text) > 120
+        ):
+
+            return timeline_text
+
+    except Exception:
+
+        pass
+
+    return build_local_recovery_timeline(
+        analysis_text
+    )
+
+# ============================================================
 # HOME PAGE
 # ============================================================
 
@@ -911,49 +1106,9 @@ elif navigation == "📸 Analyze":
                 # AI TIMELINE
                 # ============================================
 
-                timeline_prompt = f"""
-                Based on this plant disease analysis:
-
-                {result}
-
-                Generate a short plant recovery timeline.
-
-                Format:
-                Day 1
-                Day 3
-                Day 7
-                Day 14
-
-                Include:
-                - monitoring
-                - treatment
-                - care steps
-                - expected recovery progress
-
-                Keep it concise.
-                """
-
-                try:
-
-                    timeline_response = model.generate_content(
-                        timeline_prompt
-                    )
-
-                    timeline_text = (
-                        timeline_response.text
-                    )
-
-                except:
-
-                    timeline_text = """
-🗓️ Day 1: Apply treatment and isolate plant
-
-🗓️ Day 3: Monitor leaf condition
-
-🗓️ Day 7: Remove damaged leaves
-
-🗓️ Day 14: Check recovery progress
-"""
+                timeline_text = generate_recovery_timeline(
+                    result
+                )
 
                 st.markdown(
                     "## 🌿 Plant Health Timeline"
