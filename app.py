@@ -1,6 +1,8 @@
 import streamlit as st
 import google.generativeai as genai
 import time
+import io
+from PIL import Image
 import streamlit.components.v1 as components
 
 # ---------------- PAGE CONFIG ---------------- #
@@ -14,7 +16,7 @@ st.set_page_config(
 
 genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
 
-MODEL_NAME = "gemini-2.0-flash"
+MODEL_NAME = "gemini-2.0-flash-lite"
 
 model = genai.GenerativeModel(MODEL_NAME)
 
@@ -23,6 +25,7 @@ model = genai.GenerativeModel(MODEL_NAME)
 dark_mode = st.sidebar.checkbox("🌙 Dark Mode", value=False)
 
 if dark_mode:
+
     st.markdown("""
     <style>
     .main {
@@ -37,6 +40,7 @@ if dark_mode:
     """, unsafe_allow_html=True)
 
 else:
+
     st.markdown("""
     <style>
     .main {
@@ -92,20 +96,20 @@ st.markdown(
 )
 
 st.markdown(
-    "<h5 style='text-align:center;'>Upload a leaf photo to identify diseases and receive treatment advice 🌿</h5>",
+    "<h5 style='text-align:center;'>Upload a leaf image to identify diseases and receive treatment advice 🌿</h5>",
     unsafe_allow_html=True
 )
 
 st.markdown("---")
 
-# ---------------- IMAGE UPLOAD ---------------- #
+# ---------------- FILE UPLOAD ---------------- #
 
 uploaded_file = st.file_uploader(
     "📷 Upload a leaf image",
     type=["jpg", "jpeg", "png"]
 )
 
-# ---------------- AI ANALYSIS ---------------- #
+# ---------------- IMAGE ANALYSIS ---------------- #
 
 def analyze_plant_image(image_bytes):
 
@@ -127,7 +131,7 @@ def analyze_plant_image(image_bytes):
         "data": image_bytes
     }
 
-    for attempt in range(3):
+    for attempt in range(5):
 
         try:
 
@@ -141,9 +145,10 @@ def analyze_plant_image(image_bytes):
 
             if "429" in str(e):
 
-                time.sleep(5)
+                time.sleep(8)
 
             else:
+
                 return f"❌ Error: {e}"
 
     return "⚠️ API rate limit exceeded. Please try again later."
@@ -155,7 +160,7 @@ def garden_chatbot(user_input):
     prompt = f"""
     You are a gardening expert.
 
-    Answer this question simply and clearly:
+    Answer this user question simply:
 
     {user_input}
     """
@@ -175,6 +180,7 @@ def garden_chatbot(user_input):
                 time.sleep(5)
 
             else:
+
                 return f"❌ Error: {e}"
 
     return "⚠️ Too many requests. Please try again later."
@@ -185,11 +191,33 @@ if uploaded_file:
 
     image_bytes = uploaded_file.read()
 
+    # ---------- IMAGE COMPRESSION ---------- #
+
+    img = Image.open(io.BytesIO(image_bytes))
+
+    img = img.convert("RGB")
+
+    img.thumbnail((512, 512))
+
+    compressed_buffer = io.BytesIO()
+
+    img.save(
+        compressed_buffer,
+        format="JPEG",
+        quality=70
+    )
+
+    image_bytes = compressed_buffer.getvalue()
+
+    # ---------- SHOW IMAGE ---------- #
+
     st.image(
-        uploaded_file,
+        img,
         caption="📸 Uploaded Leaf",
         use_container_width=True
     )
+
+    # ---------- AI ANALYSIS ---------- #
 
     with st.spinner("🔍 Analyzing plant health..."):
 
@@ -210,7 +238,7 @@ if uploaded_file:
 
         st.markdown(result)
 
-    # ---------------- TIMELINE ---------------- #
+    # ---------- TIMELINE ---------- #
 
     st.markdown("### 🌿 Plant Health Timeline")
 
@@ -223,7 +251,7 @@ if uploaded_file:
 🗓️ +14 Days → Remove dead leaves and recheck
         """)
 
-# ---------------- EDUCATION SECTION ---------------- #
+# ---------------- EDUCATIONAL SECTION ---------------- #
 
 st.markdown("---")
 
@@ -292,7 +320,7 @@ if st.button("✅ Submit Answer"):
             "❌ Incorrect. Proper air circulation is important."
         )
 
-# ---------------- VOICE CHATBOT ---------------- #
+# ---------------- VOICE BOT ---------------- #
 
 st.markdown("---")
 
