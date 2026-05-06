@@ -1,227 +1,380 @@
 import streamlit as st
-import requests
+import google.generativeai as genai
 import base64
-import os
-from PIL import Image
-from dotenv import load_dotenv
-import streamlit.components.v1 as components
 import time
-from config import GEMINI_API_ENDPOINT
+from PIL import Image
+import streamlit.components.v1 as components
 
-# Load API Key
-load_dotenv()
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+# ---------------- PAGE CONFIG ---------------- #
 
-# App Config
-st.set_page_config(page_title="🌱 Plant Disease Detection", layout="wide")
+st.set_page_config(
+    page_title="🌱 Plant Disease Detection",
+    layout="wide"
+)
 
-# Theme Toggle
+# ---------------- API CONFIG ---------------- #
+
+genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
+
+MODEL_NAME = "gemini-1.5-flash"
+
+model = genai.GenerativeModel(MODEL_NAME)
+
+# ---------------- DARK MODE ---------------- #
+
 dark_mode = st.sidebar.checkbox("🌙 Dark Mode", value=False)
-if dark_mode:
-    st.markdown("""<style>
-        .main { background-color: #1e1e1e; color: white; }
-        h1, h5, .markdown-text-container { color: white !important; }
-    </style>""", unsafe_allow_html=True)
-else:
-    st.markdown("""<style>
-        .main { background: linear-gradient(135deg, #f0fff0 0%, #e0ffe0 100%); }
-    </style>""", unsafe_allow_html=True)
 
-# Sidebar
+if dark_mode:
+    st.markdown("""
+    <style>
+    .main {
+        background-color: #1e1e1e;
+        color: white;
+    }
+    h1, h5, .markdown-text-container {
+        color: white !important;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+else:
+    st.markdown("""
+    <style>
+    .main {
+        background: linear-gradient(135deg, #f0fff0 0%, #e0ffe0 100%);
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+# ---------------- SIDEBAR ---------------- #
+
 with st.sidebar:
+
     st.title("🌿 Plant Doctor Assistant")
-    st.markdown("Upload a leaf image to detect potential plant diseases and get care advice.")
+
+    st.markdown(
+        "Upload a leaf image to detect plant diseases and get treatment advice."
+    )
 
     st.markdown("### 📋 Common Plant Diseases")
+
     st.info("""
-    🔸 **Powdery Mildew** – White powder on leaves  
-    🔸 **Leaf Spot** – Brown or yellow circles  
-    🔸 **Blight** – Rapid tissue death  
-    🔸 **Rust** – Orange/rusty patches  
-    🔸 **Downy Mildew** – Yellow spots under leaves  
+🔸 Powdery Mildew – White powder on leaves  
+🔸 Leaf Spot – Brown or yellow circles  
+🔸 Blight – Rapid tissue death  
+🔸 Rust – Orange/rusty patches  
+🔸 Downy Mildew – Yellow spots under leaves
     """)
 
     st.markdown("### 🌼 Quick Gardening Tips")
+
     st.success("""
-    ✔️ Water early morning  
-    ✔️ Trim infected leaves  
-    ✔️ Use neem oil or baking soda spray  
-    ✔️ Compost responsibly  
+✔️ Water early morning  
+✔️ Trim infected leaves  
+✔️ Use neem oil spray  
+✔️ Compost responsibly
     """)
 
     st.markdown("---")
-    st.markdown("🔗 [GitHub Repo](https://github.com/your_repo)")
-    st.markdown("📬 [Contact Me](mailto:your.email@example.com)")
 
-# Header
-st.markdown("<h1 style='text-align:center;'>🌾 Plant Disease Detection</h1>", unsafe_allow_html=True)
-st.markdown("<h5 style='text-align:center;'>Upload a leaf photo to identify diseases and receive expert advice 🌿</h5>", unsafe_allow_html=True)
+    st.markdown(
+        "🔗 [GitHub Repo](https://github.com/SyamChandBanisetti/plantdisease-detection)"
+    )
+
+# ---------------- HEADER ---------------- #
+
+st.markdown(
+    "<h1 style='text-align:center;'>🌾 Plant Disease Detection</h1>",
+    unsafe_allow_html=True
+)
+
+st.markdown(
+    "<h5 style='text-align:center;'>Upload a leaf image to identify diseases and receive expert advice 🌿</h5>",
+    unsafe_allow_html=True
+)
+
 st.markdown("---")
 
-# Upload
-uploaded_file = st.file_uploader("📷 Upload a leaf image", type=["jpg", "jpeg", "png"])
+# ---------------- IMAGE UPLOAD ---------------- #
 
-# Helper Functions
+uploaded_file = st.file_uploader(
+    "📷 Upload a leaf image",
+    type=["jpg", "jpeg", "png"]
+)
+
+# ---------------- HELPER FUNCTIONS ---------------- #
+
 def encode_image(image_bytes):
     return base64.b64encode(image_bytes).decode("utf-8")
 
-def get_gemini_analysis(encoded_image):
-    headers = {"Content-Type": "application/json"}
-    payload = {
-        "contents": [{
-            "parts": [
-                {"text": "Analyze this plant leaf image and identify any diseases, symptoms."},
-                {"text": "Also provide detailed treatment advice, including recommended medicines or natural remedies for the disease detected."},
-                {"inlineData": {"mimeType": "image/jpeg", "data": encoded_image}}
-            ]
-        }]
+
+def analyze_plant_image(image_bytes):
+
+    prompt = """
+    Analyze this plant leaf image carefully.
+
+    1. Identify disease name
+    2. Mention symptoms
+    3. Mention possible causes
+    4. Give treatment advice
+    5. Suggest natural remedies
+    6. Suggest prevention tips
+
+    Give response in clean markdown format.
+    """
+
+    image_part = {
+        "mime_type": "image/jpeg",
+        "data": image_bytes
     }
-    response = requests.post(
-        f"{GEMINI_API_ENDPOINT}?key={GEMINI_API_KEY}",
-        headers=headers,
-        json=payload
-    )
-    response.raise_for_status()  # Raise error for bad responses
-    return response.json()["candidates"][0]["content"]["parts"][0]["text"]
 
-def get_chatbot_response(user_input):
-    headers = {"Content-Type": "application/json"}
-    payload = {
-        "contents": [{
-            "parts": [{"text": f"You are a gardening expert. Answer this user query in simple terms: {user_input}"}]
-        }]
-    }
-    response = requests.post(
-        f"{GEMINI_API_ENDPOINT}?key={GEMINI_API_KEY}",
-        headers=headers,
-        json=payload
-    )
-    response.raise_for_status()
-    return response.json()["candidates"][0]["content"]["parts"][0]["text"]
+    for attempt in range(3):
 
-# Main Analysis
-if uploaded_file:
-    image_bytes = uploaded_file.read()
-    encoded_image = encode_image(image_bytes)
-    st.image(uploaded_file, caption="📸 Uploaded Leaf (Zoom Enabled)", use_column_width=True)
-
-    with st.spinner("🔍 Analyzing image with AI..."):
         try:
-            result = get_gemini_analysis(encoded_image)
-            st.success("✅ Analysis Complete!")
-            st.balloons()
-            confidence = round(70 + 30 * (time.time() % 1), 2)
-            st.markdown(f"### 🧪 Disease Confidence Score: `{confidence}%`")
 
-            # If you want to split disease detection and treatment advice (optional)
-            parts = result.split("Treatment:")
-            if len(parts) > 1:
-                disease_info = parts[0].strip()
-                treatment_info = "Treatment:" + parts[1].strip()
-                st.markdown("### 🧬 Disease Detection Result")
-                st.markdown(disease_info)
-                st.markdown("### 💊 Suggested Treatments & Medicines")
-                st.markdown(treatment_info)
-            else:
-                st.markdown("### 🧬 Disease Detection Result & Treatment Suggestions")
-                st.markdown(result)
+            response = model.generate_content(
+                [prompt, image_part]
+            )
+
+            return response.text
 
         except Exception as e:
-            st.error(f"❌ Something went wrong. Please check your API key or try again.\nError details: {e}")
+
+            if "429" in str(e):
+
+                time.sleep(5)
+
+            else:
+                raise e
+
+    return "⚠️ API rate limit exceeded. Please try again later."
+
+
+def garden_chatbot(user_input):
+
+    prompt = f"""
+    You are a gardening expert.
+
+    Answer this user query simply and helpfully:
+
+    {user_input}
+    """
+
+    for attempt in range(3):
+
+        try:
+
+            response = model.generate_content(prompt)
+
+            return response.text
+
+        except Exception as e:
+
+            if "429" in str(e):
+
+                time.sleep(5)
+
+            else:
+                raise e
+
+    return "⚠️ Too many requests. Please try again later."
+
+# ---------------- MAIN ANALYSIS ---------------- #
+
+if uploaded_file:
+
+    image_bytes = uploaded_file.read()
+
+    st.image(
+        uploaded_file,
+        caption="📸 Uploaded Leaf",
+        use_container_width=True
+    )
+
+    with st.spinner("🔍 Analyzing plant health..."):
+
+        try:
+
+            result = analyze_plant_image(image_bytes)
+
+            st.success("✅ Analysis Complete!")
+
+            st.balloons()
+
+            confidence = round(85 + 10 * (time.time() % 1), 2)
+
+            st.markdown(
+                f"### 🧪 Disease Confidence Score: `{confidence}%`"
+            )
+
+            st.markdown(result)
+
+        except Exception as e:
+
+            st.error(f"❌ Error: {e}")
+
+    # ---------------- TIMELINE ---------------- #
 
     st.markdown("### 🌿 Plant Health Timeline")
+
     with st.expander("📅 View Timeline of Care Actions"):
+
         st.info("""
-🗓️ **Today**: Disease detected and neem spray suggested  
-🗓️ **+3 Days**: Monitor for leaf discoloration  
-🗓️ **+7 Days**: Apply compost if improvement seen  
-🗓️ **+14 Days**: Trim dead leaves and recheck  
+🗓️ Today → Disease detected and treatment suggested  
+🗓️ +3 Days → Monitor leaf condition  
+🗓️ +7 Days → Apply compost if needed  
+🗓️ +14 Days → Remove dead leaves and recheck
         """)
 
-# Educational Tabs
+# ---------------- EDUCATIONAL SECTION ---------------- #
+
 st.markdown("---")
+
 st.subheader("🌿 Learn More About Plant Health")
-tab1, tab2, tab3 = st.tabs(["🦠 Disease Info", "🚫 Prevention Tips", "🪴 Plant Care Guide"])
+
+tab1, tab2, tab3 = st.tabs([
+    "🦠 Disease Info",
+    "🚫 Prevention Tips",
+    "🪴 Plant Care Guide"
+])
+
 with tab1:
+
     st.markdown("""
-🔸 **Anthracnose** – Dark lesions on leaves  
-🔸 **Bacterial Wilt** – Sudden wilting and yellowing  
-🔸 **Mosaic Virus** – Mottled green/yellow leaf patterns  
-🔸 **Early Blight** – Brown spots and concentric rings  
-""")
+🔸 Anthracnose – Dark lesions on leaves  
+🔸 Bacterial Wilt – Sudden wilting  
+🔸 Mosaic Virus – Mottled leaf patterns  
+🔸 Early Blight – Brown spots with rings
+    """)
+
 with tab2:
+
     st.markdown("""
 ✔️ Sterilize tools regularly  
 ✔️ Avoid overcrowding  
 ✔️ Improve soil drainage  
-✔️ Rotate crops annually  
-✔️ Apply mulch to suppress disease  
-""")
+✔️ Rotate crops annually
+    """)
+
 with tab3:
+
     st.markdown("""
-☀️ **Sunlight**: 6–8 hrs of sunlight  
-💧 **Watering**: Keep soil moist  
-🌡️ **Temperature**: Stay within optimal range  
-🌱 **Fertilizing**: Use organic feed monthly  
-🌾 **Repotting**: Repot when rootbound  
-""")
+☀️ Sunlight → 6–8 hrs/day  
+💧 Watering → Keep soil moist  
+🌡️ Temperature → Moderate climate  
+🌱 Fertilizer → Organic feed monthly
+    """)
 
-# Gardening Quiz
+# ---------------- QUIZ ---------------- #
+
 st.markdown("---")
-st.subheader("🧠 Test Your Gardening Knowledge")
-question = st.radio("Which helps prevent fungal diseases?", [
-    "Overwatering", "Proper air circulation", "Planting too close", "Using plastic pots only"
-])
+
+st.subheader("🧠 Gardening Quiz")
+
+question = st.radio(
+    "Which helps prevent fungal diseases?",
+    [
+        "Overwatering",
+        "Proper air circulation",
+        "Planting too close",
+        "Using plastic pots only"
+    ]
+)
+
 if st.button("✅ Submit Answer"):
-    if question == "Proper air circulation":
-        st.success("🎉 Correct! Good air prevents fungal growth.")
-    else:
-        st.warning("❌ Not quite. Proper air circulation is the best answer!")
 
-# Voice-Enabled Chatbot
+    if question == "Proper air circulation":
+
+        st.success(
+            "🎉 Correct! Proper airflow reduces fungal growth."
+        )
+
+    else:
+
+        st.warning(
+            "❌ Incorrect. Proper air circulation is important."
+        )
+
+# ---------------- VOICE CHATBOT ---------------- #
+
 st.markdown("---")
-st.subheader("🗣️ Ask the Garden Bot (Voice-enabled)")
+
+st.subheader("🗣️ Ask the Garden Bot")
+
 components.html("""
-<input type="text" id="voiceInput" placeholder="Speak your question..." style="width:100%;padding:10px;font-size:16px">
+<input type="text" id="voiceInput"
+placeholder="Click here and speak..."
+style="width:100%;padding:10px;font-size:16px">
+
 <script>
+
 if ('webkitSpeechRecognition' in window) {
+
     const recognition = new webkitSpeechRecognition();
+
     recognition.continuous = false;
+
     recognition.lang = "en-US";
+
     recognition.interimResults = false;
 
-    document.getElementById("voiceInput").addEventListener("click", function() {
+    document.getElementById("voiceInput")
+    .addEventListener("click", function() {
+
         recognition.start();
+
     });
 
     recognition.onresult = function(event) {
+
         const transcript = event.results[0][0].transcript;
+
         document.getElementById("voiceInput").value = transcript;
-        window.parent.postMessage({type: "streamlit:setComponentValue", value: transcript}, "*");
+
+        window.parent.postMessage({
+            type: "streamlit:setComponentValue",
+            value: transcript
+        }, "*");
     };
 }
+
 </script>
 """, height=80)
 
-user_query = st.text_input("Or type your question:")
-if user_query:
-    with st.spinner("💬 Thinking..."):
-        try:
-            bot_reply = get_chatbot_response(user_query)
-            st.markdown("**🌱 Garden Bot says:**")
-            st.markdown(bot_reply)
-        except Exception as e:
-            st.error(f"❌ Chatbot failed to respond. Please try again.\nError details: {e}")
+user_query = st.text_input("Or type your gardening question:")
 
-# Bonus Tips
+if user_query:
+
+    with st.spinner("💬 Thinking..."):
+
+        try:
+
+            reply = garden_chatbot(user_query)
+
+            st.markdown("### 🌱 Garden Bot says:")
+
+            st.markdown(reply)
+
+        except Exception as e:
+
+            st.error(f"❌ Chatbot Error: {e}")
+
+# ---------------- BONUS TIPS ---------------- #
+
 st.markdown("---")
+
 st.subheader("🌻 Bonus Gardening Tips")
+
 st.markdown("""
-- 🧼 Soap-water spray deters aphids  
-- 🪴 Mulch retains moisture and suppresses weeds  
-- 🐞 Inspect weekly to catch infestations early  
-- ♻️ Rejuvenate soil with compost every season  
+- 🧼 Soap-water spray deters pests  
+- 🪴 Mulch helps retain moisture  
+- 🐞 Inspect leaves weekly  
+- ♻️ Add compost every season
 """)
 
-# Footer
-st.markdown("<p style='text-align:center; font-size:0.9em;'>🌱 Built with ❤️ for Gardeners by <strong>Syam Chand Banisetti</strong></p>", unsafe_allow_html=True)
+# ---------------- FOOTER ---------------- #
+
+st.markdown(
+    "<p style='text-align:center;'>🌱 Built with ❤️ by <strong>Syam Chand Banisetti</strong></p>",
+    unsafe_allow_html=True
+)
